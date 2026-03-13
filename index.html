@@ -429,7 +429,7 @@ textarea.form-input{resize:vertical;min-height:60px}
     <div style="display:flex;gap:8px;margin-bottom:12px">
       <label class="btn btn-primary btn-full" style="cursor:pointer">
         🖼️ 写真を選択
-        <input type="file" accept="image/*" capture="environment" id="photoInput" style="display:none" onchange="handlePhotoSelect(event)">
+        <input type="file" accept="image/*" id="photoInput" style="display:none" onchange="handlePhotoSelect(event)">
       </label>
       <button class="btn btn-outline" onclick="startCamera()" id="cameraStartBtn" style="flex-shrink:0">📷 カメラ</button>
     </div>
@@ -633,6 +633,16 @@ textarea.form-input{resize:vertical;min-height:60px}
         <div class="setting-title">名刺データ件数</div>
         <div class="setting-desc" id="dataCount">0件</div>
       </div>
+    </div>
+    <div class="setting-item">
+      <div class="setting-info">
+        <div class="setting-title">データをインポート</div>
+        <div class="setting-desc">JSONファイルから読み込み</div>
+      </div>
+      <label class="btn btn-sm btn-outline" style="cursor:pointer">
+        📥 読込
+        <input type="file" id="importJsonInput" accept=".json" style="display:none" onchange="importData(event)">
+      </label>
     </div>
     <div class="setting-item">
       <div class="setting-info">
@@ -1622,6 +1632,29 @@ function exportData() {
   a.download = `meishi_export_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   showToast('エクスポートしました');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const imported = Array.isArray(data) ? data : (data.cards || []);
+      if (!imported.length) { showToast('インポートできるデータがありません'); return; }
+      const existing = new Set(cards.map(c => c.id));
+      const newCards = imported.filter(c => !existing.has(c.id));
+      cards = [...cards, ...newCards];
+      saveCardsToStorage();
+      updateAll();
+      showToast(`${newCards.length}件インポートしました`);
+    } catch {
+      showToast('JSONファイルの読み込みに失敗しました');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
 }
 
 function clearAllData() {
